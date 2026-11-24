@@ -1,4 +1,5 @@
 import type { Product, Store } from './model';
+import { distinctModel, gtinCodes } from './model';
 import { amazon } from './adapters/amazon';
 import { bestbuy } from './adapters/bestbuy';
 import { ebay } from './adapters/ebay';
@@ -89,6 +90,7 @@ function amazonBylineBrand(doc: Document): string | undefined {
 }
 
 function priceFromText(value?: string): number | undefined {
+  if (value && /\b(?:from|starting at|to)\b|\d\s*[-–]\s*[$£€]?\s*\d/i.test(value)) return undefined;
   const match = value?.replace(/,/g, '').match(/(?:[$£€]\s*)?(\d+(?:\.\d{2})?)/);
   return match ? number(match[1]) : undefined;
 }
@@ -120,11 +122,16 @@ export function extractProduct(doc: Document, url: URL): Product | undefined {
   const aggregate = object(data.aggregateRating) || {};
   const rawTitle = string(data.name) || first(doc, site.title);
   if (!rawTitle) return undefined;
-  const price = number(offers.price) ?? number(offers.lowPrice) ?? priceFromText(first(doc, site.price)) ?? priceFromText(first(doc, ['meta[property="product:price:amount"]', 'meta[itemprop="price"]']));
-  const currency = string(offers.priceCurrency) || first(doc, ['meta[property="product:price:currency"]', 'meta[itemprop="priceCurrency"]']) || 'USD';
+  const visible = first(doc, site.price);
+  const price = priceFromText(visible) ?? number(offers.price) ?? priceFromText(first(doc, ['meta[property="product:price:amount"]', 'meta[itemprop="price"]']));
+  const explicitCurrency = visible?.match(/\b(USD|CAD|AUD|NZD|HKD|SGD|EUR|GBP)\b/i)?.[1]
+    || (/\b(?:CA|C)\$/i.test(visible || '') ? 'CAD' : /\b(?:AU|A)\$/i.test(visible || '') ? 'AUD' : undefined)
+    || (visible?.includes('€') ? 'EUR' : visible?.includes('£') ? 'GBP' : undefined);
+  const currency = (explicitCurrency || string(offers.priceCurrency) || first(doc, ['meta[property="product:price:currency"]', 'meta[itemprop="priceCurrency"]']) || 'USD').toUpperCase();
   const brand = string(data.brand) || string(object(data.brand)?.name) || labeledValue(doc, ['brand']) || (identity.store === 'amazon' ? amazonBylineBrand(doc) : undefined);
-  const model = string(data.mpn) || string(data.model) || labeledValue(doc, ['model', 'model number', 'item model number', 'mpn']);
-  const gtin = string(data.gtin13) || string(data.gtin12) || string(data.gtin14) || string(data.gtin8) || string(data.gtin) || labeledValue(doc, ['upc', 'ean', 'gtin']);
+  const model = [string(data.mpn), string(data.model), labeledValue(doc, ['model', 'model number', 'item model number', 'mpn'])]
+    .map(value => distinctModel(value, brand)).find(Boolean);
+  const gtin = gtinCodes([data.gtin13, data.gtin12, data.gtin14, data.gtin8, data.gtin, labeledValue(doc, ['upc', 'ean', 'gtin'])].flat().join(' ')).join(', ') || undefined;
   const title = cleanTitle(rawTitle);
   return {
     store: identity.store,
@@ -139,6 +146,7 @@ export function extractProduct(doc: Document, url: URL): Product | undefined {
     price: price !== undefined && price > 0 ? price : undefined,
     currency,
     rating: number(aggregate.ratingValue),
-    ratingCount: number(aggregate.reviewCount) ?? number(aggregate.ratingCount),
+    ratingCount: number(aggregate.ratingCount),
+    reviewCount: number(aggregate.reviewCount),
   };
 }

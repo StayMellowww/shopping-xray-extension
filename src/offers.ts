@@ -1,4 +1,5 @@
 import type { Product } from './model';
+import { distinctModel, gtinCodes } from './model';
 
 export type Marketplace = 'ebay' | 'bestbuy';
 export interface Offer {
@@ -35,7 +36,8 @@ function broadSearchTerm(product: Product): string {
 
 export function offerSearch(product: Product): SearchLinks {
   const query = broadSearchTerm(product);
-  const modelQuery = (product.model ? [product.brand, product.model].filter(Boolean).join(' ') : product.gtin || product.searchQuery).slice(0, 100);
+  const model = distinctModel(product.model, product.brand);
+  const modelQuery = (model ? [product.brand, model].filter(Boolean).join(' ') : gtinCodes(product.gtin)[0] || product.searchQuery).slice(0, 100);
   const makeAmazon = (term: string) => {
     const amazon = new URL('https://www.amazon.com/s');
     amazon.searchParams.set('k', term);
@@ -68,6 +70,7 @@ export function crossStoreSearches(product: Product): StoreSearch[] {
 }
 
 function exactPrice(value?: string): number | undefined {
+  if (value && /\b(?:CAD|AUD|NZD|HKD|SGD|EUR|GBP)\b|(?:CA|AU|NZ|HK|C|A)\$|[£€]/i.test(value)) return undefined;
   if (!value || /\bto\b|\bfrom\b|\d\s*[-–]\s*\$?\d/i.test(value)) return undefined;
   const match = value.match(/\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+(?:\.\d{2}))/);
   if (!match) return undefined;
@@ -98,29 +101,29 @@ export function canMatchFromTitle(product: Product): boolean {
 
 function strongMatch(title: string, product: Product): boolean {
   const name = normalized(title);
-  const model = product.model && normalized(product.model);
-  const baseModel = product.model && normalized(product.model.split('/')[0]);
-  const gtin = product.gtin && normalized(product.gtin);
+  const model = distinctModel(product.model, product.brand);
+  const hasIdentifier = (id: string, baseOnly = false) => {
+    const parts = id.match(/[a-z0-9]+/gi);
+    if (!parts?.length) return false;
+    const end = baseOnly ? '(?![a-z0-9/])' : '(?![a-z0-9])';
+    return new RegExp('(?<![a-z0-9])' + parts.join('[\\s./_-]*') + end, 'i').test(title);
+  };
   const expectedCapacity = capacity(product.title);
   const listedCapacity = capacity(title);
   if (expectedCapacity && listedCapacity && expectedCapacity !== listedCapacity) return false;
   const expectedSpeed = speed(product.title);
   const listedSpeed = speed(title);
   if (expectedSpeed && listedSpeed && expectedSpeed !== listedSpeed) return false;
-  if (model && model.length >= 4 && name.includes(model)) return true;
-  if (baseModel && baseModel.length >= 7 && name.includes(baseModel)) return true;
-  if (gtin && gtin.length >= 8 && name.includes(gtin)) return true;
+  if (model && normalized(model).length >= 4 && hasIdentifier(model)) return true;
+  const baseModel = model?.includes('/') ? model.split('/')[0] : undefined;
+  if (baseModel && normalized(baseModel).length >= 7 && hasIdentifier(baseModel, true)) return true;
+  if (gtinCodes(product.gtin).some(code => hasIdentifier(code))) return true;
   // Specific part numbers distinguish variants that share the same product name.
-  if (model && model.length >= 7 && /\d/.test(model)) return false;
+  if (model && /\d/.test(model)) return false;
   const variant = numberedVariant(product.title);
   if (variant && !name.includes(variant)) return false;
   if (!product.brand || !name.includes(normalized(product.brand))) return false;
-  if (variant) return true;
-  const numericTokens = product.title.toLowerCase().match(/\b[a-z]*\d+[a-z0-9]*\b/g) || [];
-  const matched = numericTokens.filter(token => token.length >= 3 && name.includes(normalized(token)));
-  if (matched.some(token => token.length >= 5)) return true;
-  if (matched.length >= 2) return true;
-  return false;
+  return !!variant;
 }
 
 function isAccessory(title: string): boolean {
@@ -137,7 +140,8 @@ export function parseEbayApiOffers(items: unknown, product: Product): Offer[] {
     const condition = typeof item.condition === 'string' ? item.condition.trim().slice(0, 100) : '';
     const price = Number(item.price);
     if (!title || !condition || !/\b(?:used|pre.owned)\b/i.test(condition) || item.currency !== 'USD' || !Number.isFinite(price) || price <= 0 || !strongMatch(title, product) || isAccessory(title)) continue;
-    if (product.price && (price < product.price * 0.3 || price >= product.price)) continue;
+    const baseline = product.currency === 'USD' ? product.price : undefined;
+    if (baseline && (price < baseline * 0.3 || price >= baseline)) continue;
     try {
       const url = new URL(String(item.url || ''));
       if (url.protocol !== 'https:' || (url.hostname !== 'ebay.com' && !url.hostname.endsWith('.ebay.com'))) continue;
@@ -147,7 +151,7 @@ export function parseEbayApiOffers(items: unknown, product: Product): Offer[] {
       const shipping = typeof item.shipping === 'number' && Number.isFinite(item.shipping) && item.shipping >= 0 ? item.shipping : undefined;
       const total = shipping === undefined ? undefined : price + shipping;
       found.set(canonical, { marketplace: 'ebay', title, price, shipping, currency: 'USD', condition, url: canonical,
-        savingsPercent: product.price && total !== undefined && total < product.price ? Math.round((1 - total / product.price) * 100) : undefined });
+        savingsPercent: baseline && total !== undefined && total < baseline ? Math.round((1 - total / baseline) * 100) : undefined });
     } catch { /* Ignore invalid marketplace links. */ }
   }
   return [...found.values()].sort(compareOffers).slice(0, 3);
@@ -165,7 +169,7 @@ function offerFromCard(card: Element, product: Product, marketplace: Marketplace
   const price = exactPrice(priceNode?.textContent || undefined);
   if (marketplace === 'ebay' && /\b\d+\s+bids?\b|\btime left\b/i.test(card.textContent || '')) return undefined;
   if (!title || !price || !link || !strongMatch(title, product) || isAccessory(title)) return undefined;
-  if (product.price && (price < product.price * 0.3 || price >= product.price)) return undefined;
+  if (product.currency === 'USD' && product.price && (price < product.price * 0.3 || price >= product.price)) return undefined;
   let url: URL;
   try { url = new URL(link.getAttribute('href') || '', marketplace === 'ebay' ? 'https://www.ebay.com' : 'https://www.bestbuy.com'); } catch { return undefined; }
   const domain = marketplace === 'ebay' ? 'ebay.com' : 'bestbuy.com';

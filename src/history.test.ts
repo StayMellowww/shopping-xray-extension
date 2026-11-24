@@ -1,8 +1,20 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { removeStoredEbayData, savePrice } from './history';
 import type { Product } from './model';
+import { enqueueWrite } from './storageWrites';
 
 afterEach(() => vi.unstubAllGlobals());
+
+it('retains both snapshots when two product tabs save at once', async () => {
+  const data: Record<string, unknown> = {};
+  vi.stubGlobal('chrome', { storage: { local: {
+    get: async () => structuredClone(data),
+    set: async (update: Record<string, unknown>) => Object.assign(data, update),
+  } } });
+  const product: Product = { store: 'amazon', id: 'one', title: 'Widget', searchQuery: 'Widget', url: '', price: 10 };
+  await Promise.all([product, { ...product, id: 'two' }].map(item => enqueueWrite(() => savePrice(item))));
+  expect(Object.keys(data['shopping-xray:prices:v1'] as object).sort()).toEqual(['amazon:one:USD', 'amazon:two:USD']);
+});
 
 it('removes old eBay snapshots and captured offers while retaining other price history', async () => {
   const data: Record<string, unknown> = {

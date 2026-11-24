@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeReviews, extractReviews, mergeReviewPages, reviewPageLink, type Review } from './reviews';
+
+it('reconciles anonymous and identified copies while preserving different review IDs', () => {
+  const anonymous = { rating: 5, text: 'Very comfortable pillow.' };
+  const identified = { ...anonymous, id: 'first', verified: true };
+  expect(mergeReviewPages([anonymous], [identified])).toEqual([identified]);
+  expect(mergeReviewPages([identified], [anonymous])).toEqual([identified]);
+  expect(mergeReviewPages([identified], [{ ...identified, id: 'second' }])).toHaveLength(2);
+});
 import type { Product } from './model';
 
 const product: Product = { store: 'amazon', id: 'B012345678', url: 'https://www.amazon.com/dp/B012345678', title: 'Widget', searchQuery: 'Widget' };

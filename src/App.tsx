@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { PricePoint, Product } from './model';
-import { savePrice } from './history';
+import { requestStorageWrite } from './storageWrites';
 import { collectReviews, type ReviewCollection } from './reviewCollector';
 import { analyzeReviews, mergeReviewPages, type ReviewAnalysis } from './reviews';
 import { ReviewHighlights } from './ReviewHighlights';
@@ -70,7 +70,7 @@ export function App({ product }: { product: Product }) {
     let active = true;
     setPromotions(extractPromotions(document));
     setRetailerSummary(extractRetailerSummary(document, product.store));
-    savePrice(product).then(value => { if (active) setPoints(value); }).catch(() => { if (active) setHistoryError(true); });
+    requestStorageWrite({ type: 'shopping-xray:save-price', product }).then(value => { if (active) setPoints(value); }).catch(() => { if (active) setHistoryError(true); });
     return () => { active = false; };
   }, [open, product]);
 
@@ -99,9 +99,9 @@ export function App({ product }: { product: Product }) {
       if (!active) return;
       const merged = { ...collection, reviews: mergeReviewPages(collection.reviews, captured) };
       setReviewCollection(merged);
-      setReviewAnalysis(analyzeReviews(merged.reviews, { ratingCount: product.ratingCount, targeted: merged.targeted }));
+      setReviewAnalysis(analyzeReviews(merged.reviews, { ratingCount: product.ratingCount ?? product.reviewCount, targeted: merged.targeted }));
     }).catch(() => {
-      if (active) setReviewAnalysis(analyzeReviews([], { ratingCount: product.ratingCount }));
+      if (active) setReviewAnalysis(analyzeReviews([], { ratingCount: product.ratingCount ?? product.reviewCount }));
     }).finally(() => { if (active) setReviewsLoading(false); });
     return () => { active = false; };
   }, [open, product]);
@@ -114,7 +114,6 @@ export function App({ product }: { product: Product }) {
         setReviewCollection(current => {
           if (!current) return current;
           const reviews = mergeReviewPages(current.reviews, captured);
-          if (reviews.length === current.reviews.length) return current;
           return { ...current, reviews };
         });
       }).catch(() => {});
@@ -124,8 +123,8 @@ export function App({ product }: { product: Product }) {
   }, [open, product]);
 
   useEffect(() => {
-    if (reviewCollection) setReviewAnalysis(analyzeReviews(reviewCollection.reviews, { ratingCount: product.ratingCount, targeted: reviewCollection.targeted }));
-  }, [reviewCollection, product.ratingCount]);
+    if (reviewCollection) setReviewAnalysis(analyzeReviews(reviewCollection.reviews, { ratingCount: product.ratingCount ?? product.reviewCount, targeted: reviewCollection.targeted }));
+  }, [reviewCollection, product.ratingCount, product.reviewCount]);
 
   useEffect(() => {
     if (!open || product.store !== 'amazon') return;
@@ -183,7 +182,7 @@ export function App({ product }: { product: Product }) {
         <Section title="Review signals" eyebrow={reviewAnalysis ? reviewAnalysis.sampled ? `${reviewAnalysis.sampled} written reviews` : 'No written reviews' : 'Reading reviews'} tone="violet" hasData={reviewAnalysis ? reviewAnalysis.sampled > 0 : undefined}>
           {reviewsLoading && <p className="xray-muted" role="status">Reading available reviews…</p>}
           {reviewAnalysis && <>
-            <p className="xray-muted">Analyzed <strong>{reviewAnalysis.sampled} written reviews</strong>, including {reviewAnalysis.critical} rated 1–3 stars.{product.ratingCount !== undefined && <> This page reports {product.ratingCount.toLocaleString()} ratings, which may include ratings without text.</>}</p>
+            <p className="xray-muted">Analyzed <strong>{reviewAnalysis.sampled} written reviews</strong>, including {reviewAnalysis.critical} rated 1–3 stars.{product.ratingCount !== undefined && <> This page reports {product.ratingCount.toLocaleString()} ratings, which may include ratings without text.</>}{product.reviewCount !== undefined && <> The retailer reports {product.reviewCount.toLocaleString()} reviews.</>}</p>
             {reviewCollection && reviewCollection.attemptedPages > 0 && <p className="xray-footnote">Automatic requests added {reviewCollection.newReviewsFromPages} unique reviews from {reviewCollection.fetchedPages} of {reviewCollection.attemptedPages} attempted pages. Duplicate pages do not count as new.{reviewCollection.fetchedPages === 0 && ' The store may block background requests.'}</p>}
             <p className={`xray-verdict ${reviewAnalysis.status === 'caution' ? 'xray-caution' : ''}`}>{reviewAnalysis.status === 'insufficient' ? 'Limited sample — no reliable risk verdict' : reviewAnalysis.status === 'caution' ? 'Patterns worth checking' : 'No unusual pattern in this sample'}</p>
             {reviewAnalysis.signals.length > 0 && <ul className="xray-signal-list">{reviewAnalysis.signals.map(signal => <li key={signal}>{signal}</li>)}</ul>}

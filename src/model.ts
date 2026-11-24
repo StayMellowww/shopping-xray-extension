@@ -14,6 +14,16 @@ export interface Product {
   currency?: string;
   rating?: number;
   ratingCount?: number;
+  reviewCount?: number;
+}
+
+export function gtinCodes(value?: string): string[] {
+  return [...new Set(value?.match(/\b(?:\d{8}|\d{12,14})\b/g) || [])];
+}
+
+export function distinctModel(model?: string, brand?: string): string | undefined {
+  const clean = (value?: string) => value?.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+  return clean(model) && clean(model) !== clean(brand) ? model : undefined;
 }
 
 export interface PricePoint {

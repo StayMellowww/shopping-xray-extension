@@ -37,10 +37,11 @@ export async function collectReviews(doc: Document, product: Product, pageUrl = 
       const pageReviews = extractReviews(fetched, product.store);
       if (!pageReviews.length) continue;
       const merged = mergeReviewPages(reviews, pageReviews);
-      if (merged.length === reviews.length) continue;
-      fetchedPages++;
-      newReviewsFromPages += merged.length - reviews.length;
+      const added = merged.length - reviews.length;
       reviews = merged;
+      if (!added) continue;
+      fetchedPages++;
+      newReviewsFromPages += added;
     }
     return { reviews, visibleCount, fetchedPages, attemptedPages, newReviewsFromPages, targeted: true };
   }
@@ -57,10 +58,11 @@ export async function collectReviews(doc: Document, product: Product, pageUrl = 
     const pageReviews = extractReviews(fetched, product.store);
     if (!pageReviews.length) break;
     const merged = mergeReviewPages(reviews, pageReviews);
-    if (merged.length === reviews.length) break;
-    fetchedPages++;
-    newReviewsFromPages += merged.length - reviews.length;
+    const added = merged.length - reviews.length;
     reviews = merged;
+    if (!added) break;
+    fetchedPages++;
+    newReviewsFromPages += added;
     current = fetched;
     base = new URL(link);
   }

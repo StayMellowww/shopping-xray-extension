@@ -1,11 +1,29 @@
 import { detectStore } from './adapters';
 import { canMatchFromTitle, offerSearch } from './offers';
 import type { Product } from './model';
-import { removeStoredEbayData } from './history';
+import { removeStoredEbayData, savePrice } from './history';
+import { amazonReviewId, storeCapturedReviews } from './reviewCapture';
+import { enqueueWrite } from './storageWrites';
 
 const sessionReady = chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' });
-void chrome.storage.session.remove(['shopping-xray:captured-offers:v2', 'shopping-xray:captured-offers:v3', 'shopping-xray:captured-offers:v4']);
-void removeStoredEbayData().catch(() => {});
+void chrome.storage.session.remove(['shopping-xray:captured-offers:v2', 'shopping-xray:captured-offers:v3', 'shopping-xray:captured-offers:v4', 'shopping-xray:captured-offers:v5']);
+void enqueueWrite(removeStoredEbayData).catch(() => {});
+
+chrome.runtime.onMessage.addListener((message, sender, respond) => {
+  if (!sender.url || !message) return;
+  let operation: Promise<unknown>;
+  if (message.type === 'shopping-xray:save-price') {
+    const source = detectStore(new URL(sender.url));
+    const product = message.product;
+    if (!source || source.store !== product?.store || source.id !== product.id) return;
+    operation = enqueueWrite(() => savePrice(product));
+  } else if (message.type === 'shopping-xray:save-reviews') {
+    if (!message.id || amazonReviewId(new URL(sender.url)) !== message.id || !Array.isArray(message.reviews)) return;
+    operation = enqueueWrite(() => storeCapturedReviews(message.id, message.reviews));
+  } else return;
+  operation.then(value => respond({ ok: true, value }), () => respond({ ok: false }));
+  return true;
+});
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (!message || typeof message !== 'object' || (message as { type?: string }).type !== 'shopping-xray:session-ready') return;

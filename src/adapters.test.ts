@@ -6,10 +6,17 @@ function page(html: string): Document {
 }
 
 describe('product extraction', () => {
+  it('uses the visible variant price, keeps the two retailer totals, and ignores aggregate-only prices', () => {
+    const html = '<h1>Widget</h1><script type="application/ld+json">{"@type":"Product","name":"Widget","offers":{"lowPrice":"15","priceCurrency":"USD"},"aggregateRating":{"reviewCount":50,"ratingCount":90}}</script>';
+    const url = new URL('https://www.bestbuy.com/site/widget/1234567.p');
+    expect(extractProduct(page(html), url)?.price).toBeUndefined();
+    expect(extractProduct(page(html + '<div data-testid="customer-price">EUR 49.99</div>'), url))
+      .toMatchObject({ price: 49.99, currency: 'EUR', reviewCount: 50, ratingCount: 90 });
+  });
   it('reads Amazon JSON-LD including graph metadata', () => {
     const doc = page(`<script type="application/ld+json">{"@graph":[{"@type":"BreadcrumbList"},{"@type":"Product","name":"Widget Pro | Amazon.com","brand":{"name":"Acme"},"mpn":"WP-1","gtin12":"123456789012","offers":{"price":"49.99","priceCurrency":"USD"},"aggregateRating":{"ratingValue":"4.2","reviewCount":"87"}}]}</script>`);
     expect(extractProduct(doc, new URL('https://www.amazon.com/Widget/dp/B012345678?th=1'))).toMatchObject({
-      store: 'amazon', id: 'B012345678', title: 'Widget Pro', brand: 'Acme', model: 'WP-1', gtin: '123456789012', price: 49.99, rating: 4.2, ratingCount: 87,
+      store: 'amazon', id: 'B012345678', title: 'Widget Pro', brand: 'Acme', model: 'WP-1', gtin: '123456789012', price: 49.99, rating: 4.2, reviewCount: 87, ratingCount: undefined,
     });
   });
 

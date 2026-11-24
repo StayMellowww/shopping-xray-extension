@@ -78,23 +78,34 @@ export function extractReviews(doc: Document, store: Store): Review[] {
     const verified = card.querySelector(config.verified) ? true : /unverified purchase/i.test(card.textContent || '') ? false : undefined;
     found.push({ id: card.getAttribute('data-review-id') || card.getAttribute('id') || undefined, rating: score, text: body, date: date(dateValue), verified });
   });
-  for (const review of schemaReviews(doc)) {
-    if (!found.some(item => item.text === review.text)) found.push(review);
-  }
-  return found;
+  return mergeReviewPages(found, schemaReviews(doc));
 }
 
 export function mergeReviewPages(existing: Review[], nextPage: Review[]): Review[] {
-  const key = (review: Review) => review.id ? `id:${review.id}` : `text:${review.rating}|${review.date || ''}|${review.text.toLowerCase().replace(/\s+/g, ' ')}`;
-  const present = new Set(existing.map(key));
-  const added: Review[] = [];
-  for (const review of nextPage) {
-    const identity = key(review);
-    if (present.has(identity)) continue;
-    present.add(identity);
-    added.push(review);
+  const merged: Review[] = [];
+  const byId = new Map<string, number>();
+  const byText = new Map<string, number[]>();
+  for (const review of [...existing, ...nextPage]) {
+    const key = review.rating + '|' + review.text.toLowerCase().trim().replace(/\s+/g, ' ');
+    const candidates = byText.get(key) || [];
+    const index = (review.id ? byId.get(review.id) : undefined) ?? candidates.find(i => {
+      const prior = merged[i];
+      return (!prior.id || !review.id) && (!prior.date || !review.date || prior.date === review.date);
+    });
+    if (index === undefined) {
+      if (review.id) byId.set(review.id, merged.length);
+      candidates.push(merged.length);
+      byText.set(key, candidates);
+      merged.push(review);
+    } else {
+      const prior = merged[index];
+      if (review.id) byId.set(review.id, index);
+      if ((!prior.id && review.id) || (!prior.date && review.date) || (prior.verified === undefined && review.verified !== undefined)) {
+        merged[index] = { ...prior, id: prior.id ?? review.id, date: prior.date ?? review.date, verified: prior.verified ?? review.verified };
+      }
+    }
   }
-  return [...existing, ...added];
+  return merged;
 }
 
 const issues = [

@@ -6,6 +6,20 @@ const product: Product = { store: 'amazon', id: 'B012345678', url: 'https://www.
 const page = (html: string) => new DOMParser().parseFromString(html, 'text/html');
 
 describe('marketplace offers', () => {
+  it('requires a complete identifier and handles multiple UPCs and brand-only models', () => {
+    const listing = (title: string) => ({ title, price: '180.00', currency: 'USD', shipping: 0, condition: 'Used', url: 'https://www.ebay.com/itm/123456789012' });
+    const wheel = { ...product, model: '941-000110', gtin: '097855112767 823746002493' };
+    for (const id of ['097855112767', '823746002493', '941000110']) {
+      expect(parseEbayApiOffers([listing('Wheel ' + id)], wheel)).toHaveLength(1);
+    }
+    for (const id of ['941-000110B', 'A941-000110', '0097855112767']) {
+      expect(parseEbayApiOffers([listing('Wheel ' + id)], wheel)).toHaveLength(0);
+    }
+    const pillow = { ...product, brand: 'Cozyplayer', model: 'Cozyplayer', title: 'Cozyplayer Pillow', gtin: '780280882694' };
+    expect(parseEbayApiOffers([listing('Cozyplayer travel pillow')], pillow)).toHaveLength(0);
+    expect(new URL(offerSearch(pillow).ebayModel).searchParams.get('_nkw')).toBe(pillow.gtin);
+    expect(parseEbayApiOffers([listing('Wheel 941000110')], { ...wheel, price: 100, currency: 'EUR' })[0]).toMatchObject({ price: 180, savingsPercent: undefined });
+  });
   it('ranks quoted shipping totals first and withholds savings for unknown shipping', () => {
     const base = { title: 'Sony WH-1000XM5', currency: 'USD', condition: 'Used' };
     const items = [undefined, 114.21, 0].map((shipping, i) => ({
