@@ -4,7 +4,7 @@ import type { Product } from './model';
 import { removeStoredEbayData } from './history';
 
 const sessionReady = chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' });
-void chrome.storage.session.remove(['shopping-xray:captured-offers:v2', 'shopping-xray:captured-offers:v3']);
+void chrome.storage.session.remove(['shopping-xray:captured-offers:v2', 'shopping-xray:captured-offers:v3', 'shopping-xray:captured-offers:v4']);
 void removeStoredEbayData().catch(() => {});
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
@@ -84,8 +84,8 @@ chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) =>
   }
   const urls = offerSearch(product);
   const query = new URL(urls.ebay).searchParams.get('_nkw') || product.searchQuery;
-  Promise.all([fetchEbayApi(query), fetchHtml(urls.ebay), fetchHtml(urls.bestbuy)])
-    .then(([ebayApi, ebay, bestbuy]) => sendResponse({ ebayApi, ebay, bestbuy }))
+  Promise.all([fetchEbayApi(query), fetchHtml(urls.bestbuy)])
+    .then(async ([ebayApi, bestbuy]) => sendResponse({ ebayApi, ebay: ebayApi.items ? undefined : await fetchHtml(urls.ebay), bestbuy }))
     .catch(() => sendResponse({ error: 'Marketplace search unavailable' }));
   return true;
 });

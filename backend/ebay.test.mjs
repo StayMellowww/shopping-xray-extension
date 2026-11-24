@@ -12,6 +12,7 @@ test('uses production OAuth and Browse, caches tokens, and strips seller data', 
   };
   const search = createEbaySearch({ appId: 'app', certId: 'secret', fetchImpl: fakeFetch });
   const result = await search('widget');
+  assert.equal(result[0].shipping, undefined);
   await search('second');
   assert.equal(calls.length, 3);
   assert.equal(calls[0].url, 'https://api.ebay.com/identity/v1/oauth2/token');

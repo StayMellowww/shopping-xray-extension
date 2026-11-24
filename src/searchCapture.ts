@@ -2,7 +2,7 @@ import type { Product } from './model';
 import { offerSearch, parseOfferPage, type Marketplace, type Offer } from './offers';
 
 const CONTEXT_KEY = 'shopping-xray:search-context:v1';
-export const CAPTURE_KEY = 'shopping-xray:captured-offers:v4';
+export const CAPTURE_KEY = 'shopping-xray:captured-offers:v5';
 
 interface Context { query: string; source: Marketplace; product: Product; at: number }
 interface Capture { offers: Offer[]; at: number }

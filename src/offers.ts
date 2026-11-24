@@ -5,10 +5,16 @@ export interface Offer {
   marketplace: Marketplace;
   title: string;
   price: number;
+  shipping?: number;
   currency: 'USD';
   condition: string;
   url: string;
   savingsPercent?: number;
+}
+
+export function compareOffers(a: Offer, b: Offer): number {
+  if ((a.shipping === undefined) !== (b.shipping === undefined)) return a.shipping === undefined ? 1 : -1;
+  return (a.price + (a.shipping ?? 0)) - (b.price + (b.shipping ?? 0));
 }
 
 export interface SearchLinks { amazon: string; ebay: string; bestbuy: string; amazonModel: string; ebayModel: string; bestbuyModel: string }
@@ -138,10 +144,13 @@ export function parseEbayApiOffers(items: unknown, product: Product): Offer[] {
       const id = url.pathname.match(/\/itm\/(?:[^/]+\/)?(\d{9,15})(?:\/|$)/)?.[1];
       if (!id) continue;
       const canonical = `https://www.ebay.com/itm/${id}`;
-      found.set(canonical, { marketplace: 'ebay', title, price, currency: 'USD', condition, url: canonical, savingsPercent: product.price ? Math.round((1 - price / product.price) * 100) : undefined });
+      const shipping = typeof item.shipping === 'number' && Number.isFinite(item.shipping) && item.shipping >= 0 ? item.shipping : undefined;
+      const total = shipping === undefined ? undefined : price + shipping;
+      found.set(canonical, { marketplace: 'ebay', title, price, shipping, currency: 'USD', condition, url: canonical,
+        savingsPercent: product.price && total !== undefined && total < product.price ? Math.round((1 - total / product.price) * 100) : undefined });
     } catch { /* Ignore invalid marketplace links. */ }
   }
-  return [...found.values()].sort((a, b) => a.price - b.price).slice(0, 3);
+  return [...found.values()].sort(compareOffers).slice(0, 3);
 }
 
 function offerFromCard(card: Element, product: Product, marketplace: Marketplace): Offer | undefined {
@@ -154,6 +163,7 @@ function offerFromCard(card: Element, product: Product, marketplace: Marketplace
   const link = card.querySelector<HTMLAnchorElement>(marketplace === 'ebay' ? 'a.s-item__link, a[href*="/itm/"]' : 'a[href*="/product/"], a[href*="/site/"]');
   const title = titleNode?.textContent?.replace(/<wbr\s*\/?\s*>/gi, '').replace(/Opens in a new window or tab/gi, '').replace(/Pre-Owned\s*$/i, '').replace(/\s+/g, ' ').trim();
   const price = exactPrice(priceNode?.textContent || undefined);
+  if (marketplace === 'ebay' && /\b\d+\s+bids?\b|\btime left\b/i.test(card.textContent || '')) return undefined;
   if (!title || !price || !link || !strongMatch(title, product) || isAccessory(title)) return undefined;
   if (product.price && (price < product.price * 0.3 || price >= product.price)) return undefined;
   let url: URL;
@@ -176,7 +186,6 @@ function offerFromCard(card: Element, product: Product, marketplace: Marketplace
     currency: 'USD',
     condition: conditionText || (marketplace === 'ebay' ? 'Used search result' : 'Open box'),
     url: url.href,
-    savingsPercent: product.price ? Math.round((1 - price / product.price) * 100) : undefined,
   };
 }
 
@@ -188,7 +197,7 @@ export function parseOfferPage(doc: Document, product: Product, marketplace: Mar
     const offer = offerFromCard(card, product, marketplace);
     if (offer && !byUrl.has(offer.url)) byUrl.set(offer.url, offer);
   });
-  return { offers: [...byUrl.values()].sort((a, b) => a.price - b.price).slice(0, 3), cardsFound: cards.length };
+  return { offers: [...byUrl.values()].sort(compareOffers).slice(0, 3), cardsFound: cards.length };
 }
 
 export function parseOffers(doc: Document, product: Product, marketplace: Marketplace): Offer[] {

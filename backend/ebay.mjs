@@ -30,7 +30,14 @@ export function createEbaySearch({ appId, certId, fetchImpl = fetch }) {
     const response = await fetchImpl(url, { headers: { Authorization: `Bearer ${await getToken()}`, 'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US' }, signal: AbortSignal.timeout(12000) });
     if (!response.ok) { if (response.status === 401) cached = undefined; throw new Error(`eBay search failed (HTTP ${response.status}).`); }
     const data = await response.json();
-    return (Array.isArray(data.itemSummaries) ? data.itemSummaries : []).slice(0, 50).map(item => ({ title: item.title, price: item.price?.value, currency: item.price?.currency, condition: item.condition, conditionId: item.conditionId, url: item.itemWebUrl }));
+    return (Array.isArray(data.itemSummaries) ? data.itemSummaries : []).slice(0, 50).map(item => {
+      const costs = (item.shippingOptions || [])
+        .filter(option => option.shippingCostType === 'FIXED' && option.shippingCost?.currency === 'USD' &&
+          /^\d+(?:\.\d{1,2})?$/.test(option.shippingCost.value))
+        .map(option => Number(option.shippingCost.value));
+      return { title: item.title, price: item.price?.value, currency: item.price?.currency, condition: item.condition,
+        conditionId: item.conditionId, url: item.itemWebUrl, shipping: costs.length ? Math.min(...costs) : undefined };
+    });
   };
 }
 

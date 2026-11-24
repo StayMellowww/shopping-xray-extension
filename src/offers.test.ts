@@ -6,6 +6,15 @@ const product: Product = { store: 'amazon', id: 'B012345678', url: 'https://www.
 const page = (html: string) => new DOMParser().parseFromString(html, 'text/html');
 
 describe('marketplace offers', () => {
+  it('ranks quoted shipping totals first and withholds savings for unknown shipping', () => {
+    const base = { title: 'Sony WH-1000XM5', currency: 'USD', condition: 'Used' };
+    const items = [undefined, 114.21, 0].map((shipping, i) => ({
+      ...base, shipping, price: [330, 425, 475][i], url: 'https://www.ebay.com/itm/12345678901' + i,
+    }));
+    const offers = parseEbayApiOffers(items, { ...product, price: 549 });
+    expect(offers.map(offer => offer.price)).toEqual([475, 425, 330]);
+    expect(offers.map(offer => offer.savingsPercent)).toEqual([13, 2, undefined]);
+  });
   it('rejects listings explicitly missing a wireless receiver', () => {
     const mouse: Product = { ...product, title: 'Logitech G502 LIGHTSPEED Wireless Gaming Mouse', brand: 'Logitech', model: '910-005565', price: 83.95 };
     const item = (title: string, id: string) => ({ title, price: '39.95', currency: 'USD', condition: 'Used', url: `https://www.ebay.com/itm/${id}` });
@@ -66,7 +75,7 @@ describe('marketplace offers', () => {
       <li class="s-item"><a class="s-item__link" href="https://www.ebay.com/itm/123456789014"><span class="s-item__title">Sony WH1000XM5 headphones</span></a><span class="s-item__price">$20.00</span></li>
       <li class="s-item"><a class="s-item__link" href="https://www.ebay.com/itm/123456789015"><span class="s-item__title">Sony WH1000XM4 headphones</span></a><span class="s-item__price">$200.00</span></li>
     </ul>`);
-    expect(parseOffers(doc, product, 'ebay')).toMatchObject([{ price: 250, savingsPercent: 38 }]);
+    expect(parseOffers(doc, product, 'ebay')).toMatchObject([{ price: 250 }]);
   });
 
   it('only accepts Best Buy open-box cards and safe product links', () => {

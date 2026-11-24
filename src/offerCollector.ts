@@ -1,5 +1,5 @@
 import type { Product } from './model';
-import { canMatchFromTitle, offerSearch, parseEbayApiOffers, parseOfferPage, type Marketplace, type Offer, type SearchLinks } from './offers';
+import { compareOffers, canMatchFromTitle, offerSearch, parseEbayApiOffers, parseOfferPage, type Marketplace, type Offer, type SearchLinks } from './offers';
 import { readCapturedOffers, registerSearchContext } from './searchCapture';
 
 export type SourceStatus = 'matched' | 'no-match' | 'unreadable' | 'unavailable' | 'not-searched';
@@ -32,7 +32,7 @@ export async function lookupOffers(product: Product): Promise<OfferLookup> {
       offers.push(...parsed.offers);
       status[source] = parsed.offers.length ? 'matched' : parsed.cardsFound ? 'no-match' : 'unreadable';
     }
-    return mergeCapturedOffers({ offers: offers.sort((a, b) => a.price - b.price).slice(0, 4), status, links, ebayApiError: response.ebayApi?.error, ebayApiConnected: Array.isArray(response.ebayApi?.items) }, product);
+    return mergeCapturedOffers({ offers: offers.sort(compareOffers).slice(0, 4), status, links, ebayApiError: response.ebayApi?.error, ebayApiConnected: Array.isArray(response.ebayApi?.items) }, product);
   } catch { return mergeCapturedOffers({ offers: [], status: { ebay: 'unavailable', bestbuy: 'unavailable' }, links }, product); }
 }
 
@@ -42,9 +42,9 @@ export async function mergeCapturedOffers(lookup: OfferLookup, product: Product)
     const byUrl = new Map(lookup.offers.map(offer => [offer.url, offer]));
     const status = { ...lookup.status };
     for (const source of ['ebay', 'bestbuy'] as const) {
-      for (const offer of captured[source] || []) byUrl.set(offer.url, offer);
+      for (const offer of captured[source] || []) if (!byUrl.has(offer.url)) byUrl.set(offer.url, offer);
       if (captured[source]?.length) status[source] = 'matched';
     }
-    return { ...lookup, status, offers: [...byUrl.values()].sort((a, b) => a.price - b.price).slice(0, 4) };
+    return { ...lookup, status, offers: [...byUrl.values()].sort(compareOffers).slice(0, 4) };
   } catch { return lookup; }
 }
