@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+:host { all: initial; color-scheme: light; }
+*, *::before, *::after { box-sizing: border-box; }
+.xray-app { font: 14px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; }
+.xray-app button, .xray-app a, .xray-app summary { -webkit-tap-highlight-color: transparent; }
+.xray-app button:focus-visible, .xray-app a:focus-visible, .xray-app summary:focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; }
+.xray-tab { position: fixed; z-index: 2147483647; top: 38%; right: 0; border: 2px solid #99f6e4; border-right: 0; border-radius: 16px 0 0 16px; padding: 11px 16px; background: #083344; color: #fff; font-size: 14px; font-weight: 800; box-shadow: 0 8px 24px #0f172a50; cursor: pointer; }
+.xray-tab:hover { background: #155e75; }
+.xray-tab span { color: #99f6e4; }
+.xray-tab-open { top: 14px; border-radius: 12px 0 0 12px; }
+.xray-panel { position: fixed; z-index: 2147483646; top: 0; right: 0; width: min(420px, 100vw); height: 100dvh; overflow-y: auto; background: #eaf1f6; box-shadow: -12px 0 36px #0f172a55; border-left: 2px solid #075985; }
+.xray-header { padding: 24px 100px 24px 22px; background: linear-gradient(135deg, #082f49, #134e4a); color: #fff; }
+.xray-header-kicker { margin: 0 0 8px; color: #a7f3d0; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+.xray-header h2 { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 800; }
+.xray-header p:last-child { margin: 8px 0 0; color: #e0f2fe; font-size: 12px; }
+.xray-content { padding: 18px 16px 28px; }
+.xray-product { padding: 18px; border: 1px solid #94a3b8; border-radius: 16px; background: #fff; box-shadow: 0 2px 8px #0f172a12; }
+.xray-store { margin: 0 0 7px; color: #0f766e; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.xray-product h3 { margin: 0 0 16px; font-size: 16px; line-height: 1.35; font-weight: 750; }
+.xray-price-label { margin: 0; color: #334155; font-size: 12px; font-weight: 600; }
+.xray-price { margin: 2px 0 16px; color: #0f172a; font-size: 28px; line-height: 1.15; font-weight: 850; }
+.xray-specs { margin: 0; padding-top: 12px; border-top: 1px solid #cbd5e1; }
+.xray-specs div, .xray-status div { display: flex; justify-content: space-between; gap: 14px; padding: 4px 0; font-size: 12px; }
+.xray-specs dt, .xray-status dt { color: #334155; font-weight: 600; }
+.xray-specs dd, .xray-status dd { margin: 0; text-align: right; overflow-wrap: anywhere; font-weight: 700; }
+.xray-section { margin-top: 14px; overflow: hidden; border: 1px solid #94a3b8; border-top: 5px solid; border-radius: 14px; background: #fff; box-shadow: 0 2px 8px #0f172a12; }
+.xray-teal { border-top-color: #0f766e; }
+.xray-blue { border-top-color: #1d4ed8; }
+.xray-violet { border-top-color: #6d28d9; }
+.xray-amber { border-top-color: #b45309; }
+.xray-section-button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 17px; border: 0; background: #f8fafc; color: #0f172a; text-align: left; cursor: pointer; }
+.xray-section-button:hover { background: #e2e8f0; }
+.xray-eyebrow { display: block; color: #334155; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.xray-section-title { display: block; font-size: 17px; line-height: 1.25; font-weight: 800; }
+.xray-chevron { display: flex; width: 28px; height: 28px; flex: none; align-items: center; justify-content: center; border-radius: 8px; background: #dbeafe; color: #1e3a8a; font-size: 21px; font-weight: 700; }
+.xray-section-body { padding: 15px 17px 18px; border-top: 1px solid #cbd5e1; }
+.xray-muted { margin: 0 0 11px; color: #334155; font-size: 12px; line-height: 1.5; }
+.xray-external { margin-top: 14px; padding-top: 13px; border-top: 1px solid #cbd5e1; }
+.xray-external p, .xray-footnote { margin: 9px 0 0; color: #334155; font-size: 11px; line-height: 1.5; }
+.xray-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.xray-links a, .xray-review-link { display: inline-block; border: 1px solid #0e7490; border-radius: 8px; padding: 7px 9px; background: #ecfeff; color: #164e63; font-size: 12px; line-height: 1.3; font-weight: 750; text-decoration: underline; text-underline-offset: 2px; }
+.xray-links a:hover, .xray-review-link:hover { background: #cffafe; }
+.xray-offers { margin: 0; padding: 0; list-style: none; }
+.xray-offers li { margin-bottom: 10px; padding: 11px; border: 1px solid #94a3b8; border-radius: 10px; background: #f8fafc; }
+.xray-offers a { color: #164e63; font-size: 12px; font-weight: 750; text-decoration: underline; }
+.xray-offers li div { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
+.xray-offers strong { font-size: 17px; }
+.xray-offers li div span { padding: 2px 7px; border-radius: 7px; background: #ccfbf1; color: #134e4a; font-size: 11px; font-weight: 800; }
+.xray-offers small { display: block; margin-top: 4px; color: #334155; }
+.xray-status { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid #cbd5e1; }
+.xray-more { margin-top: 12px; color: #164e63; font-size: 12px; }
+.xray-more summary { font-weight: 700; text-decoration: underline; cursor: pointer; }
+.xray-verdict { margin: 12px 0 0; padding: 10px; border: 1px solid #a5b4fc; border-radius: 8px; background: #eef2ff; color: #312e81; font-size: 12px; font-weight: 800; }
+.xray-caution { border-color: #f59e0b; background: #fffbeb; color: #78350f; }
+.xray-subheading { margin: 16px 0 7px; color: #312e81; font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: .05em; }
+.xray-signal-list, .xray-complaints { margin: 9px 0 0; padding-left: 20px; color: #1e293b; font-size: 12px; }
+.xray-signal-list li, .xray-complaints li { margin: 5px 0; }
+.xray-complaints li { margin-bottom: 12px; }
+.xray-complaints blockquote, .xray-incentive blockquote { margin: 5px 0 0; padding-left: 9px; border-left: 3px solid #a78bfa; color: #334155; font-style: italic; }
+.xray-incentive { padding: 10px; border: 1px solid #c4b5fd; border-radius: 8px; background: #faf5ff; color: #312e81; font-size: 12px; }
+.xray-incentive p { margin: 8px 0 0; color: #334155; font-size: 11px; }
+.xray-more-button { display: block; width: 100%; margin-top: 15px; padding: 10px 12px; border: 1px solid #6d28d9; border-radius: 8px; background: #ede9fe; color: #4c1d95; font-size: 12px; font-weight: 800; cursor: pointer; }
+.xray-more-button:hover { background: #ddd6fe; }
+.xray-more-button:disabled { opacity: .7; cursor: wait; }
+.xray-promotions { margin: 0; padding: 0; list-style: none; }
+.xray-promotions li { margin: 0 0 10px; padding: 10px; border: 1px solid #fbbf24; border-radius: 8px; background: #fffbeb; font-size: 12px; }
+.xray-promotions li p { margin: 4px 0; color: #1e293b; }
+.xray-promotions code { display: inline-block; margin-top: 5px; padding: 3px 7px; border-radius: 5px; background: #fef3c7; color: #78350f; font-size: 13px; font-weight: 800; }
+.xray-review-link { margin-top: 14px; }
+.xray-privacy { margin: 20px 4px 0; color: #334155; font-size: 11px; line-height: 1.5; }
