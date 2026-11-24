@@ -13,6 +13,7 @@ describe('review analysis', () => {
     expect(reviews).toHaveLength(2);
     expect(reviews[0]).toMatchObject({ rating: 1, verified: true, date: '2026-01-02' });
     expect(analyzeReviews(reviews).complaints).toMatchObject([{ label: 'Product failure or defects', mentions: 2 }]);
+    expect(analyzeReviews(reviews).complaints[0].excerpts).toHaveLength(2);
   });
 
   it('only raises date and wording signals with a substantial sample', () => {

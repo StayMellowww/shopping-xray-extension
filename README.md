@@ -11,6 +11,20 @@ A local-first Chrome extension prototype for Amazon, Best Buy, and eBay product 
 
 `npm run dev` starts CRXJS development mode. Reload the extension after changing the manifest.
 
+Run `npm run check` to run the extension and backend tests, type-check the project, and build the unpacked extension. The backend tests use simulated eBay responses and require no credentials.
+
+## Portfolio overview
+
+**Shopping X-Ray** is a local-first Chrome extension for comparing a product while shopping on Amazon, Best Buy, or eBay. Its in-page sidebar brings together product identifiers, cross-store searches, price snapshots, and themes from written reviews. On Amazon, it checks used and open-box offers against the product and shows shipping-inclusive estimates when a fixed delivery price is available.
+
+**Engineering highlights**
+
+- Built a Manifest V3 extension with React, TypeScript, and a Shadow DOM sidebar. Store-specific adapters read structured product data and fall back to visible page details.
+- Integrated eBay Browse through a local Node.js service. OAuth credentials stay outside the extension, and eBay offer captures use browser session storage.
+- Built rule-based review analysis with sampled review counts and expandable supporting excerpts. Shoppers can inspect up to three distinct excerpts for a theme on product and Amazon review pages.
+
+**Demo idea** — Open an Amazon product with a model number, compare the item and delivery costs of a used listing, then expand a review theme to inspect the shopper wording behind it. Live offers depend on availability and the local eBay service.
+
 ## Local eBay API backend
 
 The production Browse API requires an enabled production keyset and Browse access. In a local PowerShell window, set the environment values below using your own production App ID and Cert ID, then start the backend. Keep the Cert ID private and do not commit it or share it in chat.

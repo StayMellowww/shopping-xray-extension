@@ -8,7 +8,7 @@ export interface Review {
   verified?: boolean;
 }
 
-export interface Complaint { label: string; mentions: number; example: string }
+export interface Complaint { label: string; mentions: number; example: string; excerpts: string[] }
 export interface ReviewAnalysis {
   sampled: number;
   critical: number;
@@ -142,28 +142,28 @@ function olderProductComparison(value: string): boolean { return /\b(?:old|previ
 function complaintsFrom(reviews: Review[]): Complaint[] {
   return issues.map(issue => {
     let mentions = 0;
-    let example = '';
+    const excerpts = new Set<string>();
     for (const review of reviews) {
       const match = clauses(review.text).find(part => issue.pattern.test(part) && (negative.test(part) || /\bcons\s*:/i.test(part)) && !olderProductComparison(part) && !(issue.label === 'Product failure or defects' && /\bdead (?:spot|zone)\b/i.test(part)) && !(issue.label === 'Value or listing accuracy' && (/\b(?:worth\s+(?:one|1|a)\s+star|pay(?:ing)? the price|at this price point|for its current price)\b/i.test(part))));
       if (!match) continue;
       mentions++;
-      if (!example) example = evidence(match, issue.pattern);
+      if (excerpts.size < 3) excerpts.add(evidence(match, issue.pattern));
     }
-    return { label: issue.label, mentions, example };
+    return { label: issue.label, mentions, excerpts: [...excerpts], example: [...excerpts][0] || '' };
   }).filter(item => item.mentions > 0).sort((a, b) => b.mentions - a.mentions).slice(0, 3);
 }
 
 function prosFrom(reviews: Review[]): Complaint[] {
   return merits.map(merit => {
     let mentions = 0;
-    let example = '';
+    const excerpts = new Set<string>();
     for (const review of reviews) {
       const match = clauses(review.text).find(part => merit.pattern.test(part) && (positive.test(part) || /\bpros\s*:/i.test(part)) && !negative.test(part) && !hypothetical(part));
       if (!match) continue;
       mentions++;
-      if (!example) example = evidence(match, merit.pattern);
+      if (excerpts.size < 3) excerpts.add(evidence(match, merit.pattern));
     }
-    return { label: merit.label, mentions, example };
+    return { label: merit.label, mentions, excerpts: [...excerpts], example: [...excerpts][0] || '' };
   }).filter(item => item.mentions > 0).sort((a, b) => b.mentions - a.mentions).slice(0, 3);
 }
 

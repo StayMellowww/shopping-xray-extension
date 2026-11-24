@@ -20,5 +20,10 @@ describe('review tab capture', () => {
     expect(await captureAmazonReviews(page('Firmware update caused a serious problem.'), id)).toBe(1);
     expect(await readCapturedReviews(id)).toHaveLength(2);
     expect(data[REVIEW_CAPTURE_KEY]).toBeDefined();
+    const stored = data[REVIEW_CAPTURE_KEY] as Record<string, { at: number }>;
+    stored[id].at = Date.now() - 86_400_001;
+    expect(await readCapturedReviews(id)).toEqual([]);
+    expect(await captureAmazonReviews(page('The drive failed after two weeks of use.'), id)).toBe(1);
+    expect(await readCapturedReviews(id)).toHaveLength(1);
   });
 });

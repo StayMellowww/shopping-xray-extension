@@ -2,7 +2,14 @@ import type { Complaint, ReviewAnalysis } from './reviews';
 
 function Items({ items, count, empty }: { items: Complaint[]; count: number; empty: string }) {
   if (!items.length) return <p className="xray-muted">{count ? empty : 'No written reviews were available.'}</p>;
-  return <ul className="xray-complaints">{items.map(item => <li key={item.label}><strong>{item.label}</strong> · {item.mentions} {item.mentions === 1 ? 'review' : 'reviews'}<blockquote>“{item.example}”</blockquote></li>)}</ul>;
+  return <ul className="xray-complaints">{items.map(item => <li key={item.label}>
+    <strong>{item.label}</strong> · {item.mentions} {item.mentions === 1 ? 'review' : 'reviews'}
+    <blockquote>“{item.example}”</blockquote>
+    {item.excerpts.length > 1 && <details className="xray-more">
+      <summary>More excerpts about {item.label.toLowerCase()}</summary>
+      {item.excerpts.slice(1).map(quote => <blockquote key={quote}>“{quote}”</blockquote>)}
+    </details>}
+  </li>)}</ul>;
 }
 
 export function ReviewHighlights({ analysis }: { analysis: ReviewAnalysis }) {

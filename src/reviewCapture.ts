@@ -14,12 +14,14 @@ export async function captureAmazonReviews(doc: Document, id: string): Promise<n
   if (!visible.length) return 0;
   const result = await chrome.storage.local.get(REVIEW_CAPTURE_KEY);
   const captures: Record<string, Capture> = result[REVIEW_CAPTURE_KEY] || {};
-  const existing = captures[id]?.reviews || [];
+  const prior = captures[id];
+  const existing = prior && Date.now() - prior.at < 86_400_000 ? prior.reviews : [];
   const merged = mergeReviewPages(existing, visible).slice(0, 500);
   const added = merged.length - existing.length;
   if (!added) return 0;
   captures[id] = { reviews: merged, at: Date.now() };
-  const recent = Object.entries(captures).filter(([, value]) => Date.now() - value.at < 86_400_000).slice(-10);
+  const recent = Object.entries(captures).filter(([, value]) => Date.now() - value.at < 86_400_000)
+    .sort((a, b) => b[1].at - a[1].at).slice(0, 10);
   await chrome.storage.local.set({ [REVIEW_CAPTURE_KEY]: Object.fromEntries(recent) });
   return added;
 }
