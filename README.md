@@ -29,14 +29,42 @@ Captured eBay offers and search contexts are kept in Chrome's memory-backed sess
 
 ## Current scope
 
-The content script uses store adapters to identify product detail pages. It matches JSON-LD products to the active item when possible, then falls back to page selectors and labeled specifications for brand, model, SKU, and GTIN. It opens a Shadow DOM panel and stores one price snapshot per product per day in `chrome.storage.local` when opened.
+### Supported pages
 
-When opened, X-Ray analyzes visible written reviews. On Amazon it also tries one page each of 1, 2, 3, and 5-star reviews. It counts a fetched page only when it adds new reviews; Amazon may return duplicate pages or block these requests. For more coverage, open the one-star or five-star review link and use Amazon's view-more control. The review page has its own X-Ray panel that updates as visible written reviews are added, and the product sidebar updates while it is open. X-Ray keeps up to 500 captured reviews per product on this device for one day. On other supported stores it may follow up to two review pages. Reported rating totals can include ratings without text, so the sample is not treated as the full set. Reported pros and reported cons use relevant phrases from the written reviews X-Ray actually read, including mixed reviews; star-filtered samples can be skewed. The phrase rules cover general issues such as fit, comfort, temperature, function, setup, durability, delivery, support, and value. They avoid hypothetical praise and complaints about a previous product when identifiable, but cannot fully understand every review or identify every unrelated variant. A retailer-generated review summary is shown separately when readable and is labeled as potentially inaccurate. A small or targeted sample receives no reliable fake-review verdict. Explicit mentions of review incentives are shown separately as reviewer statements, not proof of misconduct.
+| Store | Where X-Ray opens | Search buttons |
+| --- | --- | --- |
+| Amazon.com | Product pages and written-review pages | eBay used and Best Buy open-box on product pages |
+| BestBuy.com | Product pages, including newer `/product/…/J39QHTC9S2` URLs | Amazon and eBay used |
+| eBay.com | Product pages | Amazon and Best Buy open-box |
 
-Every product page shows search buttons for the other two stores: Amazon pages link to eBay and Best Buy, eBay pages link to Amazon and Best Buy, and Best Buy pages link to Amazon and eBay. Search links use a cleaned product name, with exact-model alternatives when a model or GTIN is available. On Amazon product pages, the sidebar also tries live eBay used and Best Buy open-box searches when a model, GTIN, or a brand plus distinctive numbered variant is available. It uses the local eBay API backend when available and otherwise attempts a page lookup. Amazon storefront bylines can supply a missing brand. A specific model number must appear in an automatic match when available, so listings that omit it may be excluded. Prices appear only when a listing has a strong match and is at least 30% of the current price; accessory and parts listings are filtered. Numbered product variants and conflicting advertised speeds are checked, and eBay results are deduplicated by item ID. The sidebar distinguishes blocked stores, unreadable pages, and unmatched results. When a store blocks the background request, open an X-Ray search link in a tab: the extension can read visible listings there and return matching offers to the Amazon product sidebar. API offers with fixed USD shipping show an item-plus-shipping estimate and rank ahead of item-only prices. Percentage savings use that estimate against the current page price, before tax. Destination and checkout costs can vary.
+The sidebar reads structured product data (JSON-LD), then checks labeled specifications for brand, model, SKU, and GTIN. On Amazon, the storefront byline can supply the brand. If a store changes its layout, some fields may appear as unavailable.
 
-The Promotions section reads coupons, deals, and claim codes visible in the active product page. It does not search coupon databases or verify a code at checkout.
+### Prices and promotions
 
-For Amazon products, the price section links to Keepa and camelcamelcamel for older third-party history. Their charts are not imported into the local sparkline. Keepa's API requires a subscription key, which is not bundled into this extension.
+- **Local history.** Opening the sidebar on Amazon or Best Buy saves one price snapshot per product per day on this device. eBay offers stay in browser session memory.
+- **Earlier Amazon prices.** Links open Keepa and camelcamelcamel charts. The sidebar chart uses local snapshots. Importing Keepa data would require a subscription key.
+- **Promotions.** The sidebar shows coupons, deals, and claim codes visible on the product page. Eligibility and final discounts depend on checkout.
 
-Amazon review pages and product detail pages on `.amazon.com`, `.bestbuy.com`, and `.ebay.com` are matched. Best Buy's newer `/product/.../J39QHTC9S2` style URLs are supported. Site layouts can change; missing values are shown as unavailable.
+### Cross-store searches and used offers
+
+Search buttons use a cleaned product name. An exact search is also available when the page supplies a model or GTIN.
+
+- **Where offers come from.** On Amazon product pages, X-Ray checks eBay used and Best Buy open-box listings. It tries the local eBay API backend first and falls back to an eBay page lookup if the API is unavailable.
+- **How matching works.** A lookup needs a model, GTIN, or brand with a distinctive numbered variant. When a specific model number is available, sellers who omit it can be missed. X-Ray checks for conflicting variants and speeds, filters accessory and parts listings, and deduplicates eBay offers by item ID.
+- **How prices compare.** When the page price is known, a candidate’s item price must be below it and at least 30% of it. Offers with fixed USD shipping rank first. Savings compare the item plus quoted shipping with the current page price before tax. Delivery costs can vary by address.
+- **If a lookup fails.** The sidebar reports blocked requests, unreadable pages, or searches with no confident match. Open the store search button to let X-Ray check visible listings in that tab and update the Amazon sidebar.
+
+### Written reviews
+
+**How the sample grows**
+
+- Open the sidebar to analyze visible written reviews. On Amazon, X-Ray also requests one page each of one-, two-, three-, and five-star reviews. A page counts only when it adds unique reviews. On Best Buy and eBay, X-Ray may follow up to two review pages.
+- For a larger Amazon sample, open the one-star or five-star link and use Amazon’s **view more** control. The review-page panel and any open sidebar for that product update as reviews appear.
+- X-Ray keeps up to 500 captured Amazon reviews per product on this device for one day. The retailer’s rating total can include ratings without written text.
+
+**How to read the results**
+
+- **Reported pros and cons** group phrases about topics such as fit, setup, durability, delivery, and value. Expand a theme to read supporting excerpts. A mixed review can contribute to both sides.
+- **Review signals** describe patterns in the sample. Star filters can skew the results, and a small or targeted sample receives no reliability verdict. Phrase rules can misread hypothetical praise, comparisons with an older product, or reviews of another variant.
+- **Incentive mentions** quote a reviewer’s account of a possible incentive. The offer itself is unverified.
+- **Retailer summaries** appear separately when readable. The retailer generates these summaries, and they can be inaccurate.
